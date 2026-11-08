@@ -1,0 +1,37 @@
+services:
+  allkaraoke:
+    build:
+      context: .
+      args:
+        # false skips the Chromium prerender step: quicker build, same app
+        PRERENDER: 'true'
+    image: allkaraoke:latest
+    container_name: allkaraoke
+    restart: unless-stopped
+    # Remote mics and online mode use WebRTC through the SFU. The stand-in SFU listens on random UDP
+    # ports and advertises the container's own IPs, so it needs the host's network to be reachable
+    # from phones on the LAN. Host networking only works on Linux (and recent Docker Desktop).
+    # If you only play from the machine itself, or use Cloudflare Realtime, you can swap this for:
+    #   ports:
+    #     - '3010:3010'
+    network_mode: host
+    environment:
+      PORT: 3010
+      FAKE_SFU_PORT: 3480
+      # Admin panel at /admin
+      ADMIN_PANEL_PASSWORD: ${ADMIN_PANEL_PASSWORD:-change-me}
+      UNVERIFIED_SONGS_ADMIN_TOKEN: ${UNVERIFIED_SONGS_ADMIN_TOKEN:-change-me}
+      # Optional: use Cloudflare Realtime instead of the built-in stand-in SFU
+      REALTIME_APP_ID: ${REALTIME_APP_ID:-}
+      REALTIME_APP_TOKEN: ${REALTIME_APP_TOKEN:-}
+      # Optional: TURN/STUN for clients behind strict NATs
+      ONLINE_TURN_URLS: ${ONLINE_TURN_URLS:-}
+      ONLINE_TURN_USERNAME: ${ONLINE_TURN_USERNAME:-}
+      ONLINE_TURN_CREDENTIAL: ${ONLINE_TURN_CREDENTIAL:-}
+      ONLINE_STUN_URLS: ${ONLINE_STUN_URLS:-}
+    volumes:
+      # Leaderboard, shared songs and room state (KV + Durable Objects)
+      - allkaraoke-data:/data
+
+volumes:
+  allkaraoke-data:
