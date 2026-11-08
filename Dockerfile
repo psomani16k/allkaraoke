@@ -43,6 +43,16 @@ WORKDIR /opt/runtime
 RUN npm install --no-audit --no-fund --omit=dev wrangler@4.134.0 werift@0.24.4 \
     && npm cache clean --force
 COPY --chown=node:node tests/fake-sfu/server.mts ./fake-sfu/server.mts
+# Patched here rather than in tests/ to keep the fork close to upstream:
+# - WebRTC on a fixed UDP port range (FAKE_SFU_UDP_PORTS) so it can be opened in a firewall
+# - HTTP API on localhost only; with host networking it would otherwise be reachable from the LAN
+RUN sed -i \
+      -e "s|new RTCPeerConnection({ iceUseIpv6: false })|new RTCPeerConnection({ iceUseIpv6: false, icePortRange: process.env.FAKE_SFU_UDP_PORTS ? process.env.FAKE_SFU_UDP_PORTS.split('-').map(Number) : undefined })|" \
+      -e "s|server.listen(PORT, |server.listen(PORT, '127.0.0.1', |" \
+      fake-sfu/server.mts \
+    && grep -q "icePortRange: process.env.FAKE_SFU_UDP_PORTS" fake-sfu/server.mts \
+    && grep -q "server.listen(PORT, '127.0.0.1'," fake-sfu/server.mts \
+    || (echo "tests/fake-sfu/server.mts changed upstream, update the patch in the Dockerfile" && exit 1)
 
 WORKDIR /app
 COPY --from=build --chown=node:node /app/build ./build
@@ -54,6 +64,7 @@ USER node
 ENV NODE_ENV=production \
     PORT=3010 \
     FAKE_SFU_PORT=3480 \
+    FAKE_SFU_UDP_PORTS=40000-40199 \
     DATA_DIR=/data \
     WRANGLER_SEND_METRICS=false \
     PATH=/opt/runtime/node_modules/.bin:$PATH

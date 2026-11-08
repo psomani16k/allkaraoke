@@ -164,3 +164,6 @@ __screenshots__/
 # Same for the Storybook screenshots - only the `-linux` ones rendered in the CI container are committed
 /tests/storybook/__snapshots__/*-darwin.png
 /tests/storybook/__snapshots__/*-win32.png
+
+# Self-hosting secrets (see allkaraoke.env.example)
+allkaraoke.env

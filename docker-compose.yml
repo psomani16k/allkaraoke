@@ -1,37 +1,30 @@
+# Self-hosted AllKaraoke. Put this file and allkaraoke.env (see allkaraoke.env.example) in one folder,
+# then: docker compose up -d
+#
+# Open in the host firewall: TCP 3010 (the app) and UDP 40000-40199 (remote mics / online mode).
+# Phones only allow microphone access over HTTPS, so serve it through your reverse proxy with a
+# domain, proxying to http://<host-ip>:3010.
 services:
   allkaraoke:
-    build:
-      context: .
-      args:
-        # false skips the Chromium prerender step: quicker build, same app
-        PRERENDER: 'true'
-    image: allkaraoke:latest
+    image: ghcr.io/psomani16k/allkaraoke:latest
+    # To build from source instead, run from a checkout of the repo with:
+    # build: .
     container_name: allkaraoke
     restart: unless-stopped
-    # Remote mics and online mode use WebRTC through the SFU. The stand-in SFU listens on random UDP
-    # ports and advertises the container's own IPs, so it needs the host's network to be reachable
-    # from phones on the LAN. Host networking only works on Linux (and recent Docker Desktop).
-    # If you only play from the machine itself, or use Cloudflare Realtime, you can swap this for:
-    #   ports:
-    #     - '3010:3010'
+    # Remote mics and online mode use WebRTC straight to this host, which needs the host's network.
+    # Host networking only works on Linux (and recent Docker Desktop).
     network_mode: host
-    environment:
-      PORT: 3010
-      FAKE_SFU_PORT: 3480
-      # Admin panel at /admin
-      ADMIN_PANEL_PASSWORD: ${ADMIN_PANEL_PASSWORD:-change-me}
-      UNVERIFIED_SONGS_ADMIN_TOKEN: ${UNVERIFIED_SONGS_ADMIN_TOKEN:-change-me}
-      # Optional: use Cloudflare Realtime instead of the built-in stand-in SFU
-      REALTIME_APP_ID: ${REALTIME_APP_ID:-}
-      REALTIME_APP_TOKEN: ${REALTIME_APP_TOKEN:-}
-      # Optional: TURN/STUN for clients behind strict NATs
-      ONLINE_TURN_URLS: ${ONLINE_TURN_URLS:-}
-      ONLINE_TURN_USERNAME: ${ONLINE_TURN_USERNAME:-}
-      ONLINE_TURN_CREDENTIAL: ${ONLINE_TURN_CREDENTIAL:-}
-      ONLINE_STUN_URLS: ${ONLINE_STUN_URLS:-}
+    env_file:
+      - path: ./allkaraoke.env
+        required: false
     volumes:
-      # Leaderboard, shared songs and room state (KV + Durable Objects)
+      # Leaderboard, shared songs and room state
       - allkaraoke-data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
 
 volumes:
   allkaraoke-data:

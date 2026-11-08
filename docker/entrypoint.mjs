@@ -98,8 +98,14 @@ const isListening = (port) =>
     socket.once('error', () => resolve(false));
   });
 
+if (!vars.ADMIN_PANEL_PASSWORD) {
+  console.warn('ADMIN_PANEL_PASSWORD is not set, the admin panel will reject every login');
+}
+
 if (useFakeSfu) {
-  console.log(`No Cloudflare Realtime credentials, starting the stand-in SFU on :${SFU_PORT}`);
+  const udpPorts = process.env.FAKE_SFU_UDP_PORTS;
+  console.log(`No Cloudflare Realtime credentials, starting the stand-in SFU on 127.0.0.1:${SFU_PORT}`);
+  console.log(`Remote mics and online mode need UDP ${udpPorts ?? '(random ports)'} reachable on this host`);
   run(process.execPath, ['/opt/runtime/fake-sfu/server.mts'], { FAKE_SFU_PORT: SFU_PORT });
   const startedAt = Date.now();
   while (!(await isListening(SFU_PORT))) {

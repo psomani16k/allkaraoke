@@ -28,3 +28,7 @@ docs
 Dockerfile
 docker-compose.yml
 .dockerignore
+
+# Self-hosting secrets
+allkaraoke.env
+allkaraoke.env.example
